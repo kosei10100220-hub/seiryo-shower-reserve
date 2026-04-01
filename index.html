@@ -474,6 +474,7 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
     <div class="sub-tab"        id="stab2" onclick="switchAdminTab(2)">📋 全予約一覧</div>
     <div class="sub-tab"        id="stab3" onclick="switchAdminTab(3)">🚫 使用停止設定</div>
     <div class="sub-tab"        id="stab4" onclick="switchAdminTab(4)">🔑 パスワード変更</div>
+    <div class="sub-tab"        id="stab5" onclick="switchAdminTab(5)">👤 患者管理</div>
   </div>
   <div class="container-admin">
   <!-- SUB 0: 当日 -->
@@ -574,6 +575,19 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
       </div>
       <div id="pwErr" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none"></div>
       <button class="btn-primary" onclick="changePassword()">パスワードを変更する</button>
+    </div>
+  </div>
+  <!-- SUB 5: 患者管理 -->
+  <div class="asec" id="asec5">
+    <div class="card">
+      <div class="card-title">👤 患者アカウント管理
+        <div class="card-title-action" style="font-size:12px;color:var(--text-light);font-weight:400">登録患者数：<span id="aPatCount">0</span> 名</div>
+      </div>
+      <p style="font-size:13px;color:var(--text-mid);margin-bottom:16px;line-height:1.8">患者アカウントを削除すると、患者情報と将来の予約が削除されます。<br><strong>※ ログインアカウント（メールアドレス）は別途削除が必要な場合があります。</strong></p>
+      <table class="rtable" id="aPatTable">
+        <thead><tr><th>患者名</th><th>部屋番号</th><th>予約数</th><th></th></tr></thead>
+        <tbody id="aPatTbody"></tbody>
+      </table>
     </div>
   </div>
   </div><!-- /container-admin -->
@@ -784,6 +798,19 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
     </div>
   </div>
 </div>
+<!-- Admin patient delete confirm -->
+<div class="modal-overlay" id="moPatDel">
+  <div class="modal">
+    <div class="modal-icon">👤</div>
+    <div class="modal-title">患者アカウントの削除</div>
+    <div class="modal-body">この患者の情報と将来の予約をすべて削除しますか？<br>操作は取り消せません。</div>
+    <div id="aPatDelDetail" style="background:var(--cream);border-radius:12px;padding:14px;margin-bottom:4px;text-align:left;font-size:13px;line-height:2;color:var(--text-mid)"></div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closePatDelModal()">キャンセル</button>
+      <button class="btn-danger"    onclick="aDoDeletePatient()">削除する</button>
+    </div>
+  </div>
+</div>
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 <!-- ===================================================
@@ -961,7 +988,7 @@ function adminSignOut(){
 ====================================================== */
 function switchAdminTab(i) {
   currentAdminTab = i;
-  for(let j=0;j<5;j++){
+  for(let j=0;j<6;j++){
     document.getElementById(`stab${j}`).classList.toggle('active', j===i);
     document.getElementById(`asec${j}`).classList.toggle('on', j===i);
   }
@@ -970,6 +997,7 @@ function switchAdminTab(i) {
   if(i===1) renderAdminCalendar();
   if(i===2) renderAdminAllList();
   if(i===3) renderAdminBlock();
+  if(i===5) renderAdminPatients();
 }
 /* ======================================================
    PATIENT — DATE NAV
@@ -1368,7 +1396,8 @@ function renderAdminCalendar(){
   SLOTS.forEach(({start})=>{
     h+=`<tr><td class="cal-time">${start}</td>`;
     for(let d=s0;d<=s6;d++){
-      let bk=0,bl=0; ROOMS.forEach(r=>{const b=bookings[`${d}_${start}_${r}`];if(b){b.blocked?bl++:bk++;}});
+      const dayUnav=roomUnavailable[String(d)]||null;
+      let bk=0,bl=0; ROOMS.forEach(r=>{if(dayUnav===r){bl++;return;} const b=bookings[`${d}_${start}_${r}`];if(b){b.blocked?bl++:bk++;}});
       const total=ROOMS.length,isPast=d<0;
       let cls='cc-free',txt='空き';
       if(bl===total){cls='cc-blocked';txt='停止';}
@@ -1567,6 +1596,58 @@ function aDoDelete(){
   if(!aDelKey) return;
   saveBooking(aDelKey, null);
   closeDelModal(); showToast('予約を削除しました');
+}
+/* ======================================================
+   ADMIN — PATIENT MANAGEMENT
+====================================================== */
+let aPatDelUid = null;
+function renderAdminPatients(){
+  const tbody = document.getElementById('aPatTbody');
+  document.getElementById('aPatCount').textContent = patientsIndex.length;
+  if(!patientsIndex.length){
+    tbody.innerHTML='<tr class="empty"><td colspan="4">登録患者がいません</td></tr>';
+    return;
+  }
+  // 各患者の予約数を計算（将来分のみ）
+  tbody.innerHTML = patientsIndex.map(p=>{
+    const bookingCount = Object.values(bookings).filter(b=>b.patientUid===p.uid && !b.blocked).length;
+    return `<tr>
+      <td style="font-weight:500">${(p.name||'—').replace(/</g,'&lt;')}</td>
+      <td style="color:var(--text-light);font-size:12px">${(p.pid||'—').replace(/</g,'&lt;')}</td>
+      <td style="font-size:12px;color:var(--text-mid)">${bookingCount > 0 ? `${bookingCount}件` : '—'}</td>
+      <td><button class="btn-sm" onclick="openPatDelModal('${p.uid}')">削除</button></td>
+    </tr>`;
+  }).join('');
+}
+function openPatDelModal(uid){
+  aPatDelUid = uid;
+  const p = patientsIndex.find(x=>x.uid===uid);
+  if(!p) return;
+  const bookingCount = Object.values(bookings).filter(b=>b.patientUid===uid && !b.blocked).length;
+  document.getElementById('aPatDelDetail').innerHTML =
+    `<div><strong>患者名：</strong>${(p.name||'—').replace(/</g,'&lt;')}</div>
+     <div><strong>部屋番号：</strong>${(p.pid||'—').replace(/</g,'&lt;')}</div>
+     <div><strong>予約件数：</strong>${bookingCount > 0 ? `${bookingCount}件（合わせて削除されます）` : 'なし'}</div>`;
+  document.getElementById('moPatDel').classList.add('show');
+}
+function closePatDelModal(){ document.getElementById('moPatDel').classList.remove('show'); aPatDelUid=null; }
+async function aDoDeletePatient(){
+  if(!aPatDelUid) return;
+  const uid = aPatDelUid;
+  // 該当患者の予約をすべて削除
+  const updates = {};
+  Object.entries(bookings).forEach(([key, b])=>{
+    if(b.patientUid===uid && !b.blocked) updates['bookings/'+key] = null;
+  });
+  // 患者プロフィールを削除
+  updates['patients/'+uid] = null;
+  try {
+    await db.ref().update(updates);
+    closePatDelModal();
+    showToast('患者アカウントを削除しました', 'tadm');
+  } catch(e) {
+    showToast('削除に失敗しました: ' + e.message, 'terr');
+  }
 }
 /* ======================================================
    ADMIN — PASSWORD CHANGE
