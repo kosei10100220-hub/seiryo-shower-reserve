@@ -383,6 +383,7 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-functions-compat.js"></script>
 </head>
 <body>
 <!-- Loading Overlay -->
@@ -473,8 +474,7 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
     <div class="sub-tab"        id="stab1" onclick="switchAdminTab(1)">📅 週間カレンダー</div>
     <div class="sub-tab"        id="stab2" onclick="switchAdminTab(2)">📋 全予約一覧</div>
     <div class="sub-tab"        id="stab3" onclick="switchAdminTab(3)">🚫 使用停止設定</div>
-    <div class="sub-tab"        id="stab4" onclick="switchAdminTab(4)">🔑 パスワード変更</div>
-    <div class="sub-tab"        id="stab5" onclick="switchAdminTab(5)">👤 患者管理</div>
+    <div class="sub-tab"        id="stab4" onclick="switchAdminTab(4)">👤 患者管理</div>
   </div>
   <div class="container-admin">
   <!-- SUB 0: 当日 -->
@@ -544,41 +544,26 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
         </div>
         <button class="today-btn" onclick="aBlDay=0;renderAdminBlock()">今日</button>
       </div>
-      <div class="room-unavailable-row">
-        <span class="room-unavailable-label">この日使用しない室：</span>
-        <div class="room-unavailable-btns">
-          <button type="button" class="btn-room-off" id="aBtnRoomOffNone" onclick="aSetRoomUnavailable(null)">両方使用可</button>
-          <button type="button" class="btn-room-off" id="aBtnRoomOffA" onclick="aSetRoomUnavailable('A')">A室を使用不可</button>
-          <button type="button" class="btn-room-off" id="aBtnRoomOffB" onclick="aSetRoomUnavailable('B')">B室を使用不可</button>
+      <div style="margin-bottom:14px">
+        <div style="font-size:13px;font-weight:500;color:var(--text-dark);margin-bottom:10px">① 室ごとに1日まるごと使用停止</div>
+        <div class="room-unavailable-row" style="margin-bottom:0">
+          <div class="room-unavailable-btns">
+            <button type="button" class="btn-room-off" id="aBtnRoomOffNone" onclick="aSetRoomUnavailable(null)">両方使用可</button>
+            <button type="button" class="btn-room-off" id="aBtnRoomOffA" onclick="aSetRoomUnavailable('A')">A室を使用不可</button>
+            <button type="button" class="btn-room-off" id="aBtnRoomOffB" onclick="aSetRoomUnavailable('B')">B室を使用不可</button>
+            <button type="button" class="btn-room-off" id="aBtnRoomOffBoth" onclick="aSetRoomUnavailable('AB')">両方使用不可</button>
+          </div>
         </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-light)">選択した室は当日すべての時間帯が使用停止となり、患者画面に「使用不可」と表示されます。</div>
       </div>
+      <div style="border-top:1px solid rgba(138,171,138,.2);margin:16px 0"></div>
+      <div style="font-size:13px;font-weight:500;color:var(--text-dark);margin-bottom:10px">② 時間枠ごとに個別使用停止</div>
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:12px">停止したい枠をクリックするとON/OFFが切り替わります。<span style="background:rgba(185,64,64,.1);color:var(--red);padding:1px 8px;border-radius:50px;margin-left:4px;font-size:11px">🚫 停止中</span> の枠をクリックすると再開できます。</div>
       <div class="bgrid" id="aBgrid"></div>
-      <div style="margin-top:16px;padding:12px 15px;background:var(--cream);border-radius:10px;font-size:12px;color:var(--text-light);line-height:1.8">一日に一台のみ稼働する場合は「A室を使用不可」または「B室を使用不可」を選ぶと、患者画面でその室が「使用不可」と表示されます。<br>💡 枠をクリックしてON/OFFを切り替えることもできます。</div>
     </div>
   </div>
-  <!-- SUB 4: パスワード変更 -->
+  <!-- SUB 4: 患者管理 -->
   <div class="asec" id="asec4">
-    <div class="card" style="max-width:400px">
-      <div class="card-title">🔑 管理者パスワード変更</div>
-      <p style="font-size:13px;color:var(--text-mid);margin-bottom:18px;line-height:1.8">管理者タブへのアクセスに使用するパスワードを変更します。</p>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">現在のパスワード</label>
-        <input class="form-input admin-focus" type="password" id="pwCurrent" placeholder="現在のパスワード">
-      </div>
-      <div class="form-group" style="margin-bottom:12px">
-        <label class="form-label">新しいパスワード</label>
-        <input class="form-input admin-focus" type="password" id="pwNew" placeholder="新しいパスワード（4文字以上）">
-      </div>
-      <div class="form-group" style="margin-bottom:18px">
-        <label class="form-label">新しいパスワード（確認）</label>
-        <input class="form-input admin-focus" type="password" id="pwConfirm" placeholder="再入力">
-      </div>
-      <div id="pwErr" style="font-size:12px;color:var(--red);margin-bottom:10px;display:none"></div>
-      <button class="btn-primary" onclick="changePassword()">パスワードを変更する</button>
-    </div>
-  </div>
-  <!-- SUB 5: 患者管理 -->
-  <div class="asec" id="asec5">
     <div class="card">
       <div class="card-title">👤 患者アカウント管理
         <div class="card-title-action" style="font-size:12px;color:var(--text-light);font-weight:400">登録患者数：<span id="aPatCount">0</span> 名</div>
@@ -845,13 +830,15 @@ const WD = ['日','月','火','水','木','金','土'];
 /* ======================================================
    FIREBASE INIT
 ====================================================== */
-let db, patientAuth, adminAuth;
+let db, adminDb, patientAuth, adminAuth, adminFunctions;
 try {
   const app = firebase.initializeApp(firebaseConfig);
   db   = firebase.database();
   patientAuth = firebase.auth();
   const adminApp = firebase.initializeApp(firebaseConfig, 'adminApp');
   adminAuth = firebase.auth(adminApp);
+  adminDb = firebase.database(adminApp); // 管理者権限でのDB書き込み用
+  adminFunctions = firebase.app('adminApp').functions('asia-southeast1'); // 管理者権限でのCloud Functions呼び出し用
 } catch(e) {
   document.getElementById('fbLoadingMsg').textContent = 'Firebase初期化エラー: ' + e.message;
   throw e;
@@ -873,6 +860,8 @@ let currentAdminTab = 0;
 // load() / loadRoomUnavailable() → data kept live by Firebase listeners (no-op)
 function load()               { /* Firebase listener keeps bookings live */ }
 function loadRoomUnavailable(){ /* Firebase listener keeps roomUnavailable live */ }
+// 室が使用不可かどうかを判定（'A','B','AB' に対応）
+function roomIsUnavailable(val, room){ return val===room || val==='AB'; }
 // save booking update: use targeted path update to prevent race conditions
 function saveBooking(key, value) {
   if(value === null) {
@@ -881,17 +870,25 @@ function saveBooking(key, value) {
     db.ref('bookings/' + key).set(value);
   }
 }
-// save room unavailability update
+// save room unavailability update (管理者権限: adminDb を使用)
 function saveRoomUnavailableKey(dayKey, value) {
   if(value === null) {
-    db.ref('roomUnavailable/' + dayKey).remove();
+    adminDb.ref('roomUnavailable/' + dayKey).remove();
   } else {
-    db.ref('roomUnavailable/' + dayKey).set(value);
+    adminDb.ref('roomUnavailable/' + dayKey).set(value);
+  }
+}
+// 管理者による個別枠ブロック (adminDb を使用)
+function adminSaveBooking(key, value) {
+  if(value === null) {
+    adminDb.ref('bookings/' + key).remove();
+  } else {
+    adminDb.ref('bookings/' + key).set(value);
   }
 }
 // legacy save() kept for safety — writes entire bookings object (not normally called)
 function save() { db.ref('bookings').set(bookings); }
-function saveRoomUnavailable() { db.ref('roomUnavailable').set(roomUnavailable); }
+function saveRoomUnavailable() { adminDb.ref('roomUnavailable').set(roomUnavailable); }
 function isMyBooking(b){
   if(!b||b.blocked) return false;
   if(b.mine && pUid && (b.patientUid||'')===pUid) return true;
@@ -988,7 +985,7 @@ function adminSignOut(){
 ====================================================== */
 function switchAdminTab(i) {
   currentAdminTab = i;
-  for(let j=0;j<6;j++){
+  for(let j=0;j<5;j++){
     document.getElementById(`stab${j}`).classList.toggle('active', j===i);
     document.getElementById(`asec${j}`).classList.toggle('on', j===i);
   }
@@ -997,7 +994,7 @@ function switchAdminTab(i) {
   if(i===1) renderAdminCalendar();
   if(i===2) renderAdminAllList();
   if(i===3) renderAdminBlock();
-  if(i===5) renderAdminPatients();
+  if(i===4) renderAdminPatients();
 }
 /* ======================================================
    PATIENT — DATE NAV
@@ -1037,7 +1034,7 @@ function renderPatientGrid(){
     const tl=document.createElement('div'); tl.className='time-label'; tl.textContent=start; row.appendChild(tl);
     ROOMS.forEach(room=>{
       const key=`${pDayOff}_${start}_${room}`, b=bookings[key];
-      const roomOff=roomUnavailable[String(pDayOff)]===room, slotBlocked=b&&b.blocked;
+      const roomOff=roomIsUnavailable(roomUnavailable[String(pDayOff)],room), slotBlocked=b&&b.blocked;
       const isUnav=roomOff||slotBlocked;
       const isSel=pSel&&pSel.key===key, isMine=isMyBooking(b), isTaken=b&&!b.blocked&&!isMyBooking(b);
       const el=document.createElement('div');
@@ -1055,7 +1052,7 @@ function renderPatientGrid(){
   });
   ROOMS.forEach(room=>{
     const el=document.getElementById(`pStatus${room}`);
-    if(roomUnavailable[String(pDayOff)]===room){ el.textContent='使用不可'; el.className='room-label-status status-unavailable'; el.style.background=''; el.style.color=''; return; }
+    if(roomIsUnavailable(roomUnavailable[String(pDayOff)],room)){ el.textContent='使用不可'; el.className='room-label-status status-unavailable'; el.style.background=''; el.style.color=''; return; }
     el.className='room-label-status status-open';
     const taken=SLOTS.filter(({start})=>{ const b=bookings[`${pDayOff}_${start}_${room}`]; return b&&!b.blocked; }).length;
     if(taken===SLOTS.length){ el.textContent='満室'; el.style.background='rgba(232,197,184,.3)'; el.style.color='var(--brown)'; }
@@ -1358,12 +1355,13 @@ function renderAdminOverview(){
   document.getElementById('aOvDate').textContent=fmtFull(day);
   document.getElementById('aOvTitle').textContent=aOvDay===0?'本日の予約':aOvDay===1?'明日の予約':`${fmtFull(day)}の予約`;
   const total=SLOTS.length*ROOMS.length; let bk=0,bl=0;
-  SLOTS.forEach(({start})=>ROOMS.forEach(r=>{ const b=bookings[`${aOvDay}_${start}_${r}`]; if(b){b.blocked?bl++:bk++;} }));
+  const dayRoomUnav=roomUnavailable[String(aOvDay)]||null;
+  SLOTS.forEach(({start})=>ROOMS.forEach(r=>{ if(roomIsUnavailable(dayRoomUnav,r)){bl++;return;} const b=bookings[`${aOvDay}_${start}_${r}`]; if(b){b.blocked?bl++:bk++;} }));
   const fr=total-bk-bl, pct=total?Math.round(bk/total*100):0;
   document.getElementById('aStatsRow').innerHTML=`
     <div class="stat-chip"><div class="stat-label">本日の予約数</div><div class="stat-value">${bk}</div><div class="stat-sub">全${total}枠中</div></div>
     <div class="stat-chip"><div class="stat-label">空き枠</div><div class="stat-value" style="color:var(--sage-dark)">${fr}</div><div class="stat-sub">予約可能</div></div>
-    <div class="stat-chip"><div class="stat-label">使用停止</div><div class="stat-value" style="color:var(--red)">${bl}</div><div class="stat-sub">停止中</div></div>
+    <div class="stat-chip"><div class="stat-label">使用停止枠</div><div class="stat-value" style="color:var(--red)">${bl}</div><div class="stat-sub">停止中</div></div>
     <div class="stat-chip"><div class="stat-label">稼働率</div><div class="stat-value" style="color:var(--admin)">${pct}<span style="font-size:14px">%</span></div><div class="stat-sub">（停止除く）</div></div>`;
   const rows=[]; SLOTS.forEach(({start,end})=>ROOMS.forEach(r=>{ const key=`${aOvDay}_${start}_${r}`,b=bookings[key]; if(b) rows.push({start,end,r,key,b}); }));
   rows.sort((a,b)=>a.start.localeCompare(b.start));
@@ -1397,7 +1395,7 @@ function renderAdminCalendar(){
     h+=`<tr><td class="cal-time">${start}</td>`;
     for(let d=s0;d<=s6;d++){
       const dayUnav=roomUnavailable[String(d)]||null;
-      let bk=0,bl=0; ROOMS.forEach(r=>{if(dayUnav===r){bl++;return;} const b=bookings[`${d}_${start}_${r}`];if(b){b.blocked?bl++:bk++;}});
+      let bk=0,bl=0; ROOMS.forEach(r=>{if(roomIsUnavailable(dayUnav,r)){bl++;return;} const b=bookings[`${d}_${start}_${r}`];if(b){b.blocked?bl++:bk++;}});
       const total=ROOMS.length,isPast=d<0;
       let cls='cc-free',txt='空き';
       if(bl===total){cls='cc-blocked';txt='停止';}
@@ -1439,7 +1437,8 @@ function aSetRoomUnavailable(room){
   // optimistic local update
   if(room) roomUnavailable[String(aBlDay)]=room; else delete roomUnavailable[String(aBlDay)];
   saveRoomUnavailableKey(String(aBlDay), room||null);
-  showToast(room ? `室 ${room} をこの日は使用不可にしました` : '両方の室を使用可にしました', 'tadm');
+  const msg=!room?'両方の室を使用可にしました':room==='AB'?'両方の室を使用不可にしました':`室 ${room} をこの日は使用不可にしました`;
+  showToast(msg, 'tadm');
 }
 function renderAdminBlock(){
   load();
@@ -1452,14 +1451,16 @@ function renderAdminBlock(){
   document.getElementById('aBtnRoomOffA').classList.remove('active');
   document.getElementById('aBtnRoomOffB').classList.toggle('active-unav',unav==='B');
   document.getElementById('aBtnRoomOffB').classList.remove('active');
+  document.getElementById('aBtnRoomOffBoth').classList.toggle('active-unav',unav==='AB');
+  document.getElementById('aBtnRoomOffBoth').classList.remove('active');
   const grid=document.getElementById('aBgrid'); grid.innerHTML='';
   const empty=document.createElement('div'); empty.className='bhead'; grid.appendChild(empty);
-  ROOMS.forEach(r=>{ const h=document.createElement('div');h.className='bhead'; h.innerHTML=unav===r?`🚿 室 ${r}<br><span style="font-size:10px;color:var(--red)">使用不可</span>`:`🚿 シャワー室 ${r}`; grid.appendChild(h); });
+  ROOMS.forEach(r=>{ const h=document.createElement('div');h.className='bhead'; h.innerHTML=roomIsUnavailable(unav,r)?`🚿 室 ${r}<br><span style="font-size:10px;color:var(--red)">使用不可</span>`:`🚿 シャワー室 ${r}`; grid.appendChild(h); });
   SLOTS.forEach(({start,end})=>{
     const tl=document.createElement('div');tl.className='btime';tl.textContent=`${start}〜${end}`;grid.appendChild(tl);
     ROOMS.forEach(r=>{
       const key=`${aBlDay}_${start}_${r}`,b=bookings[key];
-      const isUnav=unav===r, isBl=b&&b.blocked, isBk=b&&!b.blocked;
+      const isUnav=roomIsUnavailable(unav,r), isBl=b&&b.blocked, isBk=b&&!b.blocked;
       const cell=document.createElement('div');
       if(isUnav){ cell.className='btoggle bt-unavailable'; cell.innerHTML='<div>使用不可</div>'; }
       else if(isBk){ cell.className='btoggle bt-booked'; cell.innerHTML=`<div style="font-size:11px;color:var(--text-light)">予約済</div><div class="bt-note">${b.patientName||'—'}</div>`; }
@@ -1474,9 +1475,9 @@ function renderAdminBlock(){
 }
 function aToggleBlock(key,toBlock,start,r){
   if(toBlock){
-    saveBooking(key, {blocked:true, reason:'使用停止', mine:false, patientName:'使用停止', patientId:''});
+    adminSaveBooking(key, {blocked:true, reason:'使用停止', mine:false, patientName:'使用停止', patientId:''});
   } else {
-    saveBooking(key, null);
+    adminSaveBooking(key, null);
   }
   showToast(toBlock?`🚫 室${r} ${start}〜 を停止しました`:`✓ 室${r} ${start}〜 を再開しました`, toBlock?'err':'');
 }
@@ -1574,8 +1575,8 @@ function aDoAdd(){
   const off=offFromIso(date),key=`${off}_${start}_${room}`;
   if(bookings[key]){errEl.textContent='この時間帯はすでに予約されています。';errEl.style.display='block';return;}
   loadRoomUnavailable();
-  if(roomUnavailable[String(off)]===room){errEl.textContent='この室はこの日は使用不可に設定されています。';errEl.style.display='block';return;}
-  saveBooking(key, {patientName:name, patientId:pid, patientUid:patientUid, mine:!!patientUid, byStaff:true});
+  if(roomIsUnavailable(roomUnavailable[String(off)],room)){errEl.textContent='この室はこの日は使用不可に設定されています。';errEl.style.display='block';return;}
+  adminSaveBooking(key, {patientName:name, patientId:pid, patientUid:patientUid, mine:!!patientUid, byStaff:true});
   closeAddModal(); showToast('✓ 代理予約を登録しました','tadm');
 }
 /* ======================================================
@@ -1594,7 +1595,7 @@ function openDelModal(key){
 function closeDelModal(){ document.getElementById('moDel').classList.remove('show'); aDelKey=null; }
 function aDoDelete(){
   if(!aDelKey) return;
-  saveBooking(aDelKey, null);
+  adminSaveBooking(aDelKey, null);
   closeDelModal(); showToast('予約を削除しました');
 }
 /* ======================================================
@@ -1642,41 +1643,21 @@ async function aDoDeletePatient(){
   // 患者プロフィールを削除
   updates['patients/'+uid] = null;
   try {
-    await db.ref().update(updates);
+    // DB上のデータを削除
+    await adminDb.ref().update(updates);
+    // Firebase Auth アカウントを削除（Cloud Function経由）
+    try {
+      const deleteAuth = adminFunctions.httpsCallable('deletePatientAuth');
+      await deleteAuth({ uid });
+    } catch(authErr) {
+      // Auth削除失敗はログのみ（DBは削除済みのため続行）
+      console.warn('Auth削除失敗:', authErr.message);
+    }
     closePatDelModal();
     showToast('患者アカウントを削除しました', 'tadm');
   } catch(e) {
     showToast('削除に失敗しました: ' + e.message, 'terr');
   }
-}
-/* ======================================================
-   ADMIN — PASSWORD CHANGE
-====================================================== */
-function changePassword(){
-  const cur=document.getElementById('pwCurrent').value;
-  const nw=document.getElementById('pwNew').value;
-  const cf=document.getElementById('pwConfirm').value;
-  const errEl=document.getElementById('pwErr');
-  errEl.style.display='none';
-  const user = auth.currentUser;
-  if(!user){ errEl.textContent='ログインセッションが無効です。再ログインしてください。'; errEl.style.display='block'; return; }
-  if(nw.length<6){ errEl.textContent='新しいパスワードは6文字以上で入力してください。'; errEl.style.display='block'; return; }
-  if(nw!==cf){ errEl.textContent='新しいパスワードと確認が一致しません。'; errEl.style.display='block'; return; }
-  // 再認証してからパスワード変更
-  const cred = firebase.auth.EmailAuthProvider.credential(user.email, cur);
-  user.reauthenticateWithCredential(cred)
-    .then(() => user.updatePassword(nw))
-    .then(() => {
-      document.getElementById('pwCurrent').value='';
-      document.getElementById('pwNew').value='';
-      document.getElementById('pwConfirm').value='';
-      showToast('✓ パスワードを変更しました','tadm');
-    })
-    .catch((e) => {
-      if(e.code==='auth/wrong-password'){ errEl.textContent='現在のパスワードが違います。'; }
-      else { errEl.textContent='エラーが発生しました: '+e.message; }
-      errEl.style.display='block';
-    });
 }
 /* ======================================================
    HELPERS
