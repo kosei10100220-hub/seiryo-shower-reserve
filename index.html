@@ -624,7 +624,7 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
   <div class="modal">
     <div class="modal-icon">🔑</div>
     <div class="modal-title" id="pAuthTitle">患者ログイン</div>
-    <div class="modal-body"  id="pAuthBody">お名前・部屋番号・パスワードでログインしてください。</div>
+    <div class="modal-body"  id="pAuthBody">お名前と部屋番号でログインしてください。</div>
     <div class="form-group" style="margin-bottom:10px">
       <label class="form-label">お名前 <span style="color:var(--red)">*</span></label>
       <input class="form-input" type="text" id="pAuthName" placeholder="山田 花子" maxlength="30">
@@ -633,9 +633,11 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
       <label class="form-label">部屋番号 <span style="color:var(--red)">*</span></label>
       <input class="form-input" type="text" id="pAuthPid" placeholder="203号室" maxlength="20">
     </div>
-    <div class="form-group" style="margin-bottom:10px">
-      <label class="form-label">パスワード <span style="color:var(--red)">*</span></label>
-      <input class="form-input" type="password" id="pAuthPw" placeholder="6文字以上" autocomplete="current-password">
+    <div id="pAuthMigrate" style="display:none;margin-top:8px">
+      <div style="font-size:12px;color:var(--text-mid);background:var(--cream);border-radius:10px;padding:10px 12px;margin-bottom:8px;line-height:1.6">
+        以前設定されたパスワードを一度だけ入力してください。次回からは不要になります。
+      </div>
+      <input class="form-input" type="password" id="pAuthOldPw" placeholder="以前のパスワード">
     </div>
     <div id="pAuthErr" style="font-size:12px;color:var(--red);margin-top:2px;display:none"></div>
     <div style="margin-top:10px;font-size:12px;color:var(--text-light)">
@@ -660,12 +662,6 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
           <span>自分の予約もすべてキャンセルする（推奨）</span>
         </label>
       </div>
-      <div style="font-size:12px;color:var(--text-light);line-height:1.7">
-        削除には安全のため、直前にログインした状態（またはパスワードの再入力）が必要になる場合があります。
-      </div>
-    </div>
-    <div class="form-group" style="margin-top:8px;margin-bottom:4px">
-      <input class="form-input" type="password" id="pDelPw" placeholder="必要な場合：パスワードを再入力">
     </div>
     <div id="pDelErr" style="font-size:12px;color:var(--red);margin-top:6px;display:none"></div>
     <div class="modal-btns" style="margin-top:10px">
@@ -1202,7 +1198,8 @@ function handlePatientBadgeClick(){
 function openPatientAuthModal(mode){
   pAuthMode = (mode==='register') ? 'register' : 'login';
   document.getElementById('pAuthErr').style.display='none';
-  document.getElementById('pAuthPw').value='';
+  document.getElementById('pAuthMigrate').style.display='none';
+  document.getElementById('pAuthOldPw').value='';
   document.getElementById('pAuthName').value='';
   document.getElementById('pAuthPid').value='';
   syncPatientAuthModeUI();
@@ -1218,7 +1215,7 @@ function togglePatientAuthMode(){
 function syncPatientAuthModeUI(){
   const isReg = pAuthMode==='register';
   document.getElementById('pAuthTitle').textContent = isReg ? '患者アカウント作成' : '患者ログイン';
-  document.getElementById('pAuthBody').textContent  = isReg ? 'お名前・部屋番号・パスワードでアカウントを作成します。' : 'お名前・部屋番号・パスワードでログインしてください。';
+  document.getElementById('pAuthBody').textContent  = isReg ? 'お名前と部屋番号でアカウントを作成します。' : 'お名前と部屋番号でログインしてください。';
   document.getElementById('pAuthSubmitBtn').textContent = isReg ? '作成する' : 'ログイン';
   document.getElementById('pAuthToggle').textContent = isReg ? 'ログインはこちら' : '新規作成はこちら';
 }
@@ -1236,21 +1233,54 @@ function patientEmailFrom(name, room){
   return `${r}-${n}@patients.local`;
 }
 
+function patientPwFrom(email){ return email + '::patients-local'; }
 async function submitPatientAuth(){
   const name = document.getElementById('pAuthName').value.trim();
   const room = document.getElementById('pAuthPid').value.trim();
-  const pw   = document.getElementById('pAuthPw').value;
   const errEl = document.getElementById('pAuthErr');
   errEl.style.display='none';
-  if(!name || !room || !pw){
-    errEl.textContent='お名前・部屋番号・パスワードを入力してください。';
+  if(!name || !room){
+    errEl.textContent='お名前・部屋番号を入力してください。';
     errEl.style.display='block';
     return;
   }
   const email = patientEmailFrom(name, room);
+  const pw = patientPwFrom(email);
   try{
     if(pAuthMode==='login'){
-      await patientAuth.signInWithEmailAndPassword(email, pw);
+      try{
+        await patientAuth.signInWithEmailAndPassword(email, pw);
+      }catch(eNew){
+        const c = (eNew && eNew.code) || '';
+        if(c==='auth/wrong-password' || c==='auth/invalid-credential'){
+          // 旧パスワード方式のアカウントかもしれない → 移行フロー
+          const migrateEl = document.getElementById('pAuthMigrate');
+          const oldPwEl   = document.getElementById('pAuthOldPw');
+          if(migrateEl.style.display==='none'){
+            migrateEl.style.display='block';
+            errEl.textContent='以前設定されたパスワードが必要です。下に入力してください。';
+            errEl.style.display='block';
+            oldPwEl.focus();
+            return;
+          }
+          // 2回目：旧パスワードで試してパスワードを更新
+          const oldPw = oldPwEl.value;
+          if(!oldPw){ errEl.textContent='以前のパスワードを入力してください。'; errEl.style.display='block'; return; }
+          let userCred;
+          try{
+            userCred = await patientAuth.signInWithEmailAndPassword(email, oldPw);
+          }catch(eOld){
+            errEl.textContent='以前のパスワードが違います。';
+            errEl.style.display='block';
+            return;
+          }
+          await userCred.user.updatePassword(pw);
+          closePatientAuthModal();
+          showToast('ログインしました');
+          return;
+        }
+        throw eNew;
+      }
       closePatientAuthModal();
       showToast('ログインしました');
       return;
@@ -1275,8 +1305,7 @@ async function submitPatientAuth(){
     const code = (e && e.code) || '';
     let msg = e.message || 'エラーが発生しました';
     if(code==='auth/email-already-in-use') msg='この組み合わせ（お名前・部屋番号）のアカウントは既にあります。ログインしてください。';
-    else if(code==='auth/weak-password') msg='パスワードが短すぎます（6文字以上）。';
-    else if(code==='auth/wrong-password' || code==='auth/invalid-credential') msg='お名前・部屋番号 または パスワードが違います。';
+    else if(code==='auth/wrong-password' || code==='auth/invalid-credential') msg='お名前・部屋番号が違います。';
     errEl.textContent = msg;
     errEl.style.display='block';
   }
@@ -1288,10 +1317,8 @@ async function patientSignOut(){
 }
 function openPatientDeleteModal(){
   document.getElementById('pDelErr').style.display='none';
-  document.getElementById('pDelPw').value='';
   document.getElementById('pDelCancelBookings').checked = true;
   document.getElementById('moPDel').classList.add('show');
-  setTimeout(()=>document.getElementById('pDelPw').focus(),250);
 }
 function closePatientDeleteModal(){ document.getElementById('moPDel').classList.remove('show'); }
 async function patientDeleteAccount(){
@@ -1321,10 +1348,8 @@ async function patientDeleteAccount(){
   }catch(e){
     const code = (e && e.code) || '';
     if(code==='auth/requires-recent-login'){
-      // try reauth with password provided
-      const pw = document.getElementById('pDelPw').value;
-      if(!pw){ errEl.textContent='安全のため、パスワードを再入力してください。'; errEl.style.display='block'; return; }
       try{
+        const pw = patientPwFrom(user.email);
         const cred = firebase.auth.EmailAuthProvider.credential(user.email, pw);
         await user.reauthenticateWithCredential(cred);
         await user.delete();
@@ -1333,8 +1358,7 @@ async function patientDeleteAccount(){
         showToast('アカウントを削除しました');
         return;
       }catch(e2){
-        const c2=(e2&&e2.code)||'';
-        errEl.textContent = (c2==='auth/wrong-password' || c2==='auth/invalid-credential') ? 'パスワードが違います。' : ('エラー: ' + (e2.message||e2));
+        errEl.textContent = 'エラー: ' + (e2.message||e2);
         errEl.style.display='block';
         return;
       }
@@ -1693,9 +1717,7 @@ document.getElementById('inPid').addEventListener('keydown', e=>{ if(e.key==='En
 document.getElementById('authEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('authPw').focus(); document.getElementById('authErr').style.display='none'; });
 document.getElementById('authPw').addEventListener('keydown',e=>{ if(e.key==='Enter') doAuth(); document.getElementById('authErr').style.display='none'; });
 document.getElementById('pAuthName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('pAuthPid').focus(); document.getElementById('pAuthErr').style.display='none'; });
-document.getElementById('pAuthPid').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('pAuthPw').focus(); document.getElementById('pAuthErr').style.display='none'; });
-document.getElementById('pAuthPw').addEventListener('keydown',e=>{ if(e.key==='Enter') submitPatientAuth(); document.getElementById('pAuthErr').style.display='none'; });
-document.getElementById('pDelPw').addEventListener('keydown',e=>{ if(e.key==='Enter') patientDeleteAccount(); document.getElementById('pDelErr').style.display='none'; });
+document.getElementById('pAuthPid').addEventListener('keydown',e=>{ if(e.key==='Enter') submitPatientAuth(); document.getElementById('pAuthErr').style.display='none'; });
 document.getElementById('aAddName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('aAddPid').focus(); document.getElementById('aAddName').classList.remove('err'); document.getElementById('aAddErr').style.display='none'; });
 document.getElementById('aAddPid').addEventListener('keydown',e=>{ if(e.key==='Enter') aDoAdd(); });
 /* ======================================================
