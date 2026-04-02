@@ -821,10 +821,8 @@ const ROOMS = ['A','B'];
 // 管理者認証（trueにすると認証をバイパスします）
 const ADMIN_AUTH_BYPASS = false;
 const SLOTS = [
-  {start:'8:30', end:'9:15'},  {start:'9:15',  end:'10:00'},
-  {start:'10:00',end:'10:45'}, {start:'10:45', end:'11:30'},
-  {start:'11:30',end:'12:15'}, {start:'12:15', end:'13:00'},
-  {start:'13:00',end:'13:45'},
+  {start:'8:45', end:'9:30'},  {start:'9:30',  end:'10:15'},
+  {start:'10:15',end:'11:00'}, {start:'11:00', end:'11:45'},
 ];
 const WD = ['日','月','火','水','木','金','土'];
 /* ======================================================
@@ -1026,7 +1024,7 @@ function renderPatientGrid(){
       lastPer=per;
       const r=document.createElement('div'); r.className='time-row';
       r.style.cssText='margin:10px 0 4px';
-      const lbl=per==='morning'?'午前 8:30 — 12:00':'午後 12:00 — 14:00';
+      const lbl=per==='morning'?'午前 8:45 — 11:45':'午後 12:00 — 14:00';
       r.innerHTML=`<div style="grid-column:1/-1;display:flex;align-items:center;gap:12px"><div style="flex:1;height:1px;background:rgba(138,171,138,.15)"></div><span style="font-size:11px;color:var(--text-light);letter-spacing:.1em;font-family:'Cormorant Garamond',serif;font-style:italic;white-space:nowrap">${lbl}</span><div style="flex:1;height:1px;background:rgba(138,171,138,.15)"></div></div>`;
       grid.appendChild(r);
     }
