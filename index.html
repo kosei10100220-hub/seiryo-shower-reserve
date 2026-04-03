@@ -428,13 +428,10 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
 <div class="container">
   <!-- DATE NAV -->
   <div class="date-nav">
-    <button class="date-btn" onclick="pChangeDay(-1)">‹</button>
     <div class="date-display">
       <div class="date-main" id="pDateMain"></div>
       <div class="date-sub"  id="pDateSub"></div>
-      <div class="date-dots" id="pDateDots"></div>
     </div>
-    <button class="date-btn" onclick="pChangeDay(1)">›</button>
   </div>
   <!-- LEGEND -->
   <div class="legend">
@@ -629,7 +626,19 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
     </div>
     <div class="form-group" style="margin-bottom:4px">
       <label class="form-label">部屋番号</label>
-      <input class="form-input" type="text" id="inPid" placeholder="203号室" maxlength="20">
+      <select class="form-select" id="inPid">
+        <option value="">選択してください</option>
+        <option value="1号室">1号室</option>
+        <option value="2号室">2号室</option>
+        <option value="3号室">3号室</option>
+        <option value="5号室">5号室</option>
+        <option value="6号室">6号室</option>
+        <option value="7号室">7号室</option>
+        <option value="8号室">8号室</option>
+        <option value="10号室">10号室</option>
+        <option value="11号室">11号室</option>
+        <option value="12号室">12号室</option>
+      </select>
     </div>
     <div class="modal-btns">
       <button class="modal-btn-back"    id="setupCancelBtn" onclick="closeSetupModal()" style="display:none">キャンセル</button>
@@ -653,7 +662,19 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
     </div>
     <div class="form-group" style="margin-bottom:10px">
       <label class="form-label">部屋番号 <span style="color:var(--red)">*</span></label>
-      <input class="form-input" type="text" id="pAuthPid" placeholder="203号室" maxlength="20">
+      <select class="form-select" id="pAuthPid">
+        <option value="">選択してください</option>
+        <option value="1号室">1号室</option>
+        <option value="2号室">2号室</option>
+        <option value="3号室">3号室</option>
+        <option value="5号室">5号室</option>
+        <option value="6号室">6号室</option>
+        <option value="7号室">7号室</option>
+        <option value="8号室">8号室</option>
+        <option value="10号室">10号室</option>
+        <option value="11号室">11号室</option>
+        <option value="12号室">12号室</option>
+      </select>
     </div>
     <div id="pAuthErr" style="font-size:12px;color:var(--red);margin-top:2px;display:none"></div>
     <div style="margin-top:10px;font-size:12px;color:var(--text-light)">
@@ -772,7 +793,19 @@ body { font-family:'Noto Sans JP',sans-serif; background:var(--cream); color:var
       </div>
       <div class="form-group">
         <label class="form-label">部屋番号</label>
-        <input class="form-input admin-focus" type="text" id="aAddPid" placeholder="203号室" maxlength="20">
+        <select class="form-select admin-focus" id="aAddPid">
+          <option value="">選択してください</option>
+          <option value="1号室">1号室</option>
+          <option value="2号室">2号室</option>
+          <option value="3号室">3号室</option>
+          <option value="5号室">5号室</option>
+          <option value="6号室">6号室</option>
+          <option value="7号室">7号室</option>
+          <option value="8号室">8号室</option>
+          <option value="10号室">10号室</option>
+          <option value="11号室">11号室</option>
+          <option value="12号室">12号室</option>
+        </select>
       </div>
     </div>
     <div id="aAddErr" style="font-size:12px;color:var(--red);margin-top:4px;display:none"></div>
@@ -1005,18 +1038,12 @@ function switchAdminTab(i) {
 /* ======================================================
    PATIENT — DATE NAV
 ====================================================== */
-function pChangeDay(d){ pDayOff = Math.max(0,Math.min(6,pDayOff+d)); pClearSel(); renderPatient(); }
+function pChangeDay(d){ /* 当日のみ表示のため日付変更は無効 */ }
 function renderDateNav(){
-  const d = dayFromOff(pDayOff);
+  pDayOff = 0; // 常に当日に固定
+  const d = dayFromOff(0);
   document.getElementById('pDateMain').textContent = fmtFull(d);
-  document.getElementById('pDateSub').textContent  = ['今日','明日','明後日'][pDayOff]||`${pDayOff}日後`;
-  const dots = document.getElementById('pDateDots'); dots.innerHTML='';
-  for(let i=0;i<7;i++){
-    const dot=document.createElement('div'); dot.className='date-dot'+(i===pDayOff?' active':'');
-    dot.title=fmtFull(dayFromOff(i));
-    const ci=i; dot.onclick=()=>{pDayOff=ci; pClearSel(); renderPatient();};
-    dots.appendChild(dot);
-  }
+  document.getElementById('pDateSub').textContent  = '今日';
 }
 /* ======================================================
    PATIENT — GRID
@@ -1169,6 +1196,7 @@ async function savePatient(){
   const name=document.getElementById('inName').value.trim();
   const id=document.getElementById('inPid').value.trim();
   if(!name){ document.getElementById('inName').classList.add('err'); document.getElementById('inName').focus(); return; }
+  if(!id){ document.getElementById('inPid').focus(); showToast('部屋番号を選択してください', 'terr'); return; }
   if(!pUid){ showToast('先にログインしてください', 'terr'); closeSetupModal(); openPatientAuthModal('login'); return; }
   pName=name; pId=id;
   try{
@@ -1233,6 +1261,9 @@ function syncPatientAuthModeUI(){
 function normalizePatientKey(s){
   return String(s||'')
     .trim()
+    // 全角英数字・スペースを半角に統一してから処理
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/　/g, ' ')
     .toLowerCase()
     .replace(/\s+/g,'')
     .replace(/[^\p{Letter}\p{Number}]+/gu,'');
@@ -1240,7 +1271,7 @@ function normalizePatientKey(s){
 function patientEmailFrom(name, room){
   const n = normalizePatientKey(name);
   const r = normalizePatientKey(room);
-  return `${r}-${n}@patients.local`;
+  return `${r}-${n}@shr.local`;
 }
 function patientPasswordFrom(name, room){
   // パスワードはUI非表示のため名前+部屋番号から自動生成
@@ -1270,7 +1301,6 @@ async function submitPatientAuth(){
     }
     const cred = await patientAuth.createUserWithEmailAndPassword(email, pw);
     const uid = cred.user.uid;
-    // Ensure the "next modal" sees the just-entered values immediately
     pUid = uid;
     pName = name;
     pId = room;
@@ -1287,8 +1317,19 @@ async function submitPatientAuth(){
   }catch(e){
     const code = (e && e.code) || '';
     let msg = e.message || 'エラーが発生しました';
-    if(code==='auth/email-already-in-use') msg='この組み合わせ（お名前・部屋番号）のアカウントは既にあります。ログインしてください。';
-    else if(code==='auth/wrong-password' || code==='auth/invalid-credential') msg='お名前または部屋番号が違います。';
+    if(code==='auth/email-already-in-use'){
+      // アカウントが既にある → ログインモードに切り替えてそのままログイン試行
+      try{
+        await patientAuth.signInWithEmailAndPassword(email, pw);
+        closePatientAuthModal();
+        showToast('ログインしました');
+        return;
+      }catch(_){
+        msg='この組み合わせ（お名前・部屋番号）のアカウントは既にあります。ログインしてください。';
+      }
+    } else if(code==='auth/wrong-password' || code==='auth/invalid-credential' || code==='auth/user-not-found'){
+      msg='アカウントが見つかりませんでした。初めてのご利用は「新規作成はこちら」からご登録ください。';
+    }
     errEl.textContent = msg;
     errEl.style.display='block';
   }
@@ -1714,7 +1755,6 @@ document.getElementById('moAuth').addEventListener('click',e=>{ if(e.target.id==
    KEYBOARD
 ====================================================== */
 document.getElementById('inName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('inPid').focus(); document.getElementById('inName').classList.remove('err'); });
-document.getElementById('inPid').addEventListener('keydown', e=>{ if(e.key==='Enter') savePatient(); });
 document.getElementById('authEmail').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('authPw').focus(); document.getElementById('authErr').style.display='none'; });
 document.getElementById('authPw').addEventListener('keydown',e=>{ if(e.key==='Enter') doAuth(); document.getElementById('authErr').style.display='none'; });
 document.getElementById('pAuthName').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('pAuthPid').focus(); document.getElementById('pAuthErr').style.display='none'; });
